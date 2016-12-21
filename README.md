@@ -1,4 +1,5 @@
 ## c++ 多线程学习笔记 ##
+[csdn地址](http://blog.csdn.net/dr_bin/article/details/53782669):http://blog.csdn.net/dr_bin/article/details/53782669
 #### ch 1   课程简介 #####
 > - 包含的头文件 'thread'
 > > linux 下 g++ 编译的时候加上参数 -lpthear,否则会报 undefined reference to `pthread_create' 错误
