@@ -1,0 +1,48 @@
+#include<functional>
+#include <iostream>
+#include<mutex>
+#include<string>
+#include<thread>
+#include<fstream>
+#include<deque>
+using namespace std;
+
+std::deque<int> q;
+mutex mu;
+
+void fun1(){
+    int count = 10;
+    while(count > 0){
+        std::unique_lock<mutex> locker1(mu);
+        q.push_front(count);
+        locker1.unlock();
+        this_thread::sleep_for(chrono::milliseconds(20));
+        count--;
+    }
+}
+
+void fun2(){
+    int data = 0;
+    while(data != 1){
+        std::unique_lock<mutex> locker2(mu);
+        cout << "正在尝试读取数据!" << endl;
+        if(!q.empty()){
+            data = q.back();
+            q.pop_back();
+            locker2.unlock();
+            cout << "成功读取数据:" << data << endl;
+        }else{
+            cout << "数据读取失败!" << endl;
+            locker2.unlock();
+        }
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    thread t1(fun1);
+    thread t2(fun2);
+    t1.join();
+    t2.join();
+    return 0;
+}
