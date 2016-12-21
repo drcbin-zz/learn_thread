@@ -1,6 +1,6 @@
 ## c++ 多线程学习笔记 ##
 #### ch 1   课程简介 #####
-> - 包含的头文件 <thread>
+> - 包含的头文件 <thread\>
 > > linux 下 g++ 编译的时候加上参数 -lpthear,否则会报 undefined reference to `pthread_create' 错误
 > - 创建线程的方法：thread t1(functionName);  //functionName为待执行的函数
 > - 启动线程的方法:
@@ -548,7 +548,7 @@
 如上述这样,cond便成了生产者和消费者之间的条件.
 
 
-----
+----3
 #### ch7 future,promise 和 async() ####
 ----
 有时候,我们是需要两个线程之间交换数据的.比如下面程序:
@@ -566,4 +566,26 @@
         t1.join();
         return 0;
     }
+    如果我们需要在主函数里面读取add函数的返回值,那么怎么办呢?
+    
+> 这就用到async了,修改我们的代码如下
+
+    #include<future>
+    int main(){
+	    int a = 2;
+	    future<int> fu = std::async(add, 4, a);
+	    cout << fu.get() << endl;    //fu.get()函数稚嫩被调用一次,调用多次程序崩溃. 
+	    return 0;
+    }
+    上述代码中,使用了async,他会异步执行一个可调用对象,并返回一个future对象.
+    
+> > async不一定会创建线程,这取决于其第一个参数.
+> > 1. std::launch::referred:不创建线程,只是延期启动可调用对象.当fu.get()方法被调用的时候,才启动可调用对象
+> > 2. std::launch::async: 启动一个线程来调用这个可可调用对像
+> > 3. std::launch::referred | std::launch::async: 默认是这个,不任何参数
+
+> - 从父线程中获取变量
+     上面的例子是父线程获取子线程的变量,如果子线程相获取父线程的变量,就得用另一种方法.
+
+    
  
