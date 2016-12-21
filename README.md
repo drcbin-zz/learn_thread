@@ -1,7 +1,8 @@
 ## c++ 多线程学习笔记 ##
 #### ch 1   课程简介 #####
-> - 包含的头文件 <thread\>
+> - 包含的头文件 'thread'
 > > linux 下 g++ 编译的时候加上参数 -lpthear,否则会报 undefined reference to `pthread_create' 错误
+
 > - 线程创建的前提:给线程对象传递一个[可调用对象](http://blog.csdn.net/lc_910927/article/details/21250111)作为参数
 > - 创建线程的方法：thread t1(functionName);  //functionName为待执行的函数
 > - 启动线程的方法:
@@ -33,7 +34,7 @@
 
 ====================
 	
-#### ch1 线程管理 ####
+#### ch2 线程管理 ####
 ----
 > - 主线程可以和子线程同时执行业务逻辑，eg:
 
