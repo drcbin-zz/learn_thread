@@ -2,6 +2,7 @@
 #### ch 1   课程简介 #####
 > - 包含的头文件 <thread\>
 > > linux 下 g++ 编译的时候加上参数 -lpthear,否则会报 undefined reference to `pthread_create' 错误
+> - 线程创建的前提:给线程对象传递一个[可调用对象](http://blog.csdn.net/lc_910927/article/details/21250111)作为参数
 > - 创建线程的方法：thread t1(functionName);  //functionName为待执行的函数
 > - 启动线程的方法:
 	1. t1.join()    //主线程会等待t1线程执行完毕后才会退出。
@@ -29,7 +30,6 @@
 	}
 	
 ****
-
 
 ====================
 	
@@ -548,7 +548,7 @@
 如上述这样,cond便成了生产者和消费者之间的条件.
 
 
-----3
+----
 #### ch7 future,promise 和 async() ####
 ----
 有时候,我们是需要两个线程之间交换数据的.比如下面程序:
@@ -578,6 +578,7 @@
 	    return 0;
     }
     上述代码中,使用了async,他会异步执行一个可调用对象,并返回一个future对象.
+    -------- future可以简单的理解成:现在未知,但以后一定会有并且确定的东西
     
 > > async不一定会创建线程,这取决于其第一个参数.
 > > 1. std::launch::referred:不创建线程,只是延期启动可调用对象.当fu.get()方法被调用的时候,才启动可调用对象
@@ -585,7 +586,82 @@
 > > 3. std::launch::referred | std::launch::async: 默认是这个,不任何参数
 
 > - 从父线程中获取变量
-     上面的例子是父线程获取子线程的变量,如果子线程相获取父线程的变量,就得用另一种方法.
+     上面的例子是父线程获取子线程的变量,如果子线程相获取父线程的变量,就得用另一种方法.修改代码如下:
+     
+    int add(int a, future<int>& f){
+	    int b = f.get();    // 1号注释
+	    cout << "results is : " << a + b << endl;
+	    return a+b;
+    }
+     
+    int main(){
+	    int a;
+	    std::promise<int> p;    // 2号注释
+	    future<int> f = p.get_future();    // 3号注释
+	    future<int> fu = std::async(add, 4, ref(f));
+	    a = 20;
+	    p.set_value(a);    // 4 号注释
+	    cout << fu.get() << endl; 
+	    return 0;
+    }
+    上述代码中,我们是先创建的线程,在往线程里面传递参数(注释4的地方传递的参数),实现了子线程读取父线程中变量的目的.有一下地方需要注意.
+    1. 注释2的地方表示给个承诺.由p产生的一个future对象在将来一定会给其设置值.所以就一定要有注释4这样设置值的地方存在.从而实现承诺p.
+    2.如果注释4处没有给值实现承诺,那么当在其他线程中访问p产生的future对象的时候就会抛出 std::future_error::broken_promise 异常
+    3. promise和future只能被移动,不能被复制
+    
+> 上面我们说了, future是不能复制的,只能移动.也就是说,当main线程的第一个子线程取走future之后,main里面就不存在这个future了.当main有多个子线程的时候并且同时需要这个future的时候,就 只有一个线程能得到.解决方法有:
+> > 1. 创建多个promise 和多个 future, 分别传给不同的线程.(重复)
+> > 2. 使用c++提供的future.share();方法,返回一个shared_future 对象.shared_future可以被复制.
+
+	int add(int a, shared_future<int> f){    //由于shared_futurek可以被复制,可以通过值传递
+	    int b = f.get();
+	    cout << "results is : " << a + b << endl;
+	    return a+b;
+	}
+
+	int main(){
+	    int a;
+	    std::promise<int> p;
+	    future<int> f = p.get_future();    //实例化一个future
+	    shared_future<int> fs = f.share();    //由f实例化出shared_future
+	    future<int> fu = std::async(add, 4, fs);    //4个线程同时使用一个shared_future
+	    future<int> fu1 = std::async(add, 4,fs);    //可以只用值传递
+	    future<int> fu2 = std::async(add, 4,fs);
+	    future<int> fu3 = std::async(add, 4,fs);
+	    a = 20;
+	    p.set_value(a);
+	    cout << fu.get() << endl;   
+	    return 0;
+	}
+	
+	
+	
+----
+#### ch8 可调用对象 ####
+----
+
+> - 可调用对象有5种:
+> > 1. 函数.
+> > 2. 函数指针.
+> > 3. lambda表达式
+> > 4. bind函数
+> > 5. 重载了函数调用运算符的对象.
+		函数调用运算符:()
+		
+> - 创建线程的9中方法:假设存在 class A a; 和 function f(); A 重载了'()'运算符.
+> > - thread t1(a);    //用a的拷贝
+> > - thread t2(std::ref(a));   //用a的引用
+> > - thread t3(std::move(a));    //用a.
+> > - thread t4(A());    //A的构造函数,一个临时的A()对象
+> > - thread t5(f);    //用函数f
+> > - thread t6(&f)    //用函数的引用    //函数名本身就是函数的指针变量,入同数组名就是该数组的指针变量一样
+> > - thread t7([](){});    //使用lambda函数
+> > - thread t8(&A::f, a);    //使用对象a.f()函数拷贝
+> > - thread t9(&A::f, &a);    //使用a.f() 函数的引用
+
+## 暂时更新到此 ##
+    
+     
 
     
  
